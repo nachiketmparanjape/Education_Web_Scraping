@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 
 url = "http://web.archive.org/web/20110514112442/http://unstats.un.org/unsd/demographic/products/socind/education.htm"
 r = requests.get(url)
@@ -79,11 +80,11 @@ edlife_df['women'] = edlife_df['women'].astype(int)
 edlife_df['total'] = edlife_df['total'].astype(int)
 edlife_df['year'] = edlife_df['year'].astype(int)
 
-for i in range(len(edlife_df)):
-    edlife_df['country'][[i]] = edlife_df['country'][[i]].to_string().split(" ")[-1]
-edlife_df['country'] = edlife_df['country'].astype(str)
+#for i in range(len(edlife_df)):
+#    edlife_df['country'][[i]] = edlife_df['country'][[i]].to_string().split(" ")[-1]
+#edlife_df['country'] = edlife_df['country'].astype(str)
 
-edlife_df['country'] = edlife_df['country'].astype("category")
+#edlife_df['country'] = edlife_df['country'].astype("category")
 
 """Plotting!!"""
 
@@ -146,3 +147,34 @@ coldict = dict(zip(wrong_columns,correct_columns))
 #print(coldict)
 gdp_df = gdp_df.rename(columns = coldict)
 
+#Common Countries
+
+list1 = list(edlife_df['country'].tolist())
+list2 = list(gdp_df['country'].tolist())
+
+common = list(set(list1) & set(list2))
+ 
+#Combine Datasets
+gdp = []
+men = []
+women = []
+total = []
+
+for i in common:
+    df1 = edlife_df[edlife_df['country'] == i ]
+    df2 = gdp_df[gdp_df['country'] == i]
+    for i in list(df1['year']):
+        men.append(df1.men.iloc[0])
+        women.append(df1.women.iloc[0])
+        total.append(df1.total.iloc[0])
+        gdp.append((df2[str(i)].iloc[0]))
+
+df_final = pd.DataFrame({'total': total, 'men':men, 'women': women, 'gdp': gdp})
+#Data Wrangling
+df_final = df_final[df_final['gdp'] != str('')]
+df_final['gdp'] = df_final['gdp'].astype(float).values
+df_final['loggdp'] = np.log(df_final['gdp'])
+
+#Visualization of correlation
+g = sns.pairplot(df_final[['loggdp','total','men','women']], palette="Set2", diag_kind="hist", size=2.5, kind = 'reg')
+print(df_final.corr())
